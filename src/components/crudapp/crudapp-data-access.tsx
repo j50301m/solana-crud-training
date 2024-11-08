@@ -52,6 +52,7 @@ export function useCrudappProgram() {
 
   return {
     program,
+    programId,
     accounts,
     getProgramAccount,
     createEntry,
@@ -86,7 +87,7 @@ export function useCrudappProgramAccount({ account }: { account: PublicKey }) {
 
   const deleteEntry = useMutation({
     mutationKey: ['journalEntry', 'delete', { cluster }],
-    mutationFn:async (title: string) => {
+    mutationFn: async (title: string) => {
       return program.methods.deleteJournalEntry(title).rpc();
     },
     onSuccess: (signature) => {
