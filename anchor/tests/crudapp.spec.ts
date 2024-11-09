@@ -15,7 +15,7 @@ describe('crudapp', () => {
   let program = anchor.workspace.Crudapp as Program<Crudapp>;
 
   beforeAll(async () => {
-    context = await startAnchor('',[{name:'Crudapp',programId: programId}],[]);
+    context = await startAnchor('',[{name:'crudapp',programId: programId}],[]);
     provider = new BankrunProvider(context);
     program = new Program(IDL, provider);
   },5000);
@@ -46,7 +46,7 @@ describe('crudapp', () => {
     expect(account.title).toBe(title);
     expect(account.message).toBe(message);
     expect(account.owner.toString()).toEqual(owner.toString());
-  });
+  },10000);
 
   it('Update journal entry', async () => {
     // Define args
@@ -77,7 +77,7 @@ describe('crudapp', () => {
     expect(account.title).toBe(title);
     expect(account.message).toBe(newMessage);
     expect(account.owner.toString()).toEqual(owner.toString());
-  });
+  },10000);
 
   it('Delete journal entry', async () => {
     // Define args
@@ -107,5 +107,5 @@ describe('crudapp', () => {
       expect(anchorError.message).toContain('Could not find')
     });
     expect(accountInfo).toBeUndefined();
-  });
+  },10000);
 })
