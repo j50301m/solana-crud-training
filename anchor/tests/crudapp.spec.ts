@@ -18,7 +18,7 @@ describe('crudapp', () => {
     context = await startAnchor('',[{name:'Crudapp',programId: programId}],[]);
     provider = new BankrunProvider(context);
     program = new Program(IDL, provider);
-  });
+  },5000);
 
   it('Create journal entry', async () => {
     // Define args
