@@ -8,7 +8,7 @@ import { useWallet } from '@solana/wallet-adapter-react'
 export function CrudappCreate() {
   const [title, setTitle] = useState('')
   const [message, setMessage] = useState('')
-  const { createEntry,programId } = useCrudappProgram()
+  const { createEntry, programId } = useCrudappProgram()
   const { publicKey } = useWallet();
 
   const isFormValid = title.trim() !== '' && message.trim() !== ''
@@ -16,7 +16,7 @@ export function CrudappCreate() {
   const handleSubmit = () => {
     if (publicKey && isFormValid) {
       console.log('publicKey: ', publicKey.toString())
-      console.log('programId: ',programId.toString())
+      console.log('programId: ', programId.toString())
       createEntry.mutateAsync({ title, message, owner: publicKey })
     }
   }
@@ -26,26 +26,60 @@ export function CrudappCreate() {
   }
 
   return (
-    <div>
-      <input
-        type="text"
-        placeholder="Title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-      />
-      <textarea
-        placeholder="Message"
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        className='textarea textarea-bordered w-full max-w-xx'
-      />
-      <button
-        onClick={handleSubmit}
-        disabled={createEntry.isPending || !isFormValid}
-        className="btn btn-xs lg:btn-md btn-primary"
-      />
+    <div className="card bg-base-100 shadow-xl">
+      <div className="card-body">
+        <h2 className="card-title text-2xl font-bold mb-6">Create New Journal Entry</h2>
+
+        <div className="space-y-6">
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Title</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Enter your title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="input input-bordered w-full"
+            />
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Message</span>
+            </label>
+            <textarea
+              placeholder="Write your message here..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="textarea textarea-bordered w-full min-h-[150px]"
+            />
+          </div>
+
+          <div className="flex justify-between items-center mt-6">
+            <div className="text-sm text-base-content/70">
+              Connected: {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}
+            </div>
+            <button
+              onClick={handleSubmit}
+              disabled={createEntry.isPending || !isFormValid}
+              className="btn btn-primary"
+            >
+              {createEntry.isPending ? (
+                <>
+                  <span className="loading loading-spinner loading-sm mr-2"></span>
+                  Creating...
+                </>
+              ) : (
+                'Create Journal Entry'
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
-  )
+  );
+
 }
 
 export function CrudappList() {
