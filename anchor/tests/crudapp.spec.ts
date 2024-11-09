@@ -1,76 +1,111 @@
 import * as anchor from '@coral-xyz/anchor'
 import {Program} from '@coral-xyz/anchor'
-import {Keypair} from '@solana/web3.js'
+import {Keypair,PublicKey} from '@solana/web3.js'
 import {Crudapp} from '../target/types/crudapp'
+import { BankrunProvider, startAnchor } from "anchor-bankrun";
+import exp from 'constants';
+
+const IDL = require('../target/idl/crudapp.json')
+const programId = new PublicKey("6n1cENEPtF8VFxQNb3zGkjUMgxoDVrZr2zh4JNU3LiSN");
 
 describe('crudapp', () => {
-  // Configure the client to use the local cluster.
-  const provider = anchor.AnchorProvider.env()
-  anchor.setProvider(provider)
-  const payer = provider.wallet as anchor.Wallet
+  let context;
+  let provider: BankrunProvider;
+  anchor.setProvider(anchor.AnchorProvider.env());
+  let program = anchor.workspace.Crudapp as Program<Crudapp>;
 
-  const program = anchor.workspace.Crudapp as Program<Crudapp>
+  beforeAll(async () => {
+    context = await startAnchor('',[{name:'Crudapp',programId: programId}],[]);
+    provider = new BankrunProvider(context);
+    program = new Program(IDL, provider);
+  });
 
-  const crudappKeypair = Keypair.generate()
+  it('Create journal entry', async () => {
+    // Define args
+    const owner = provider.wallet.publicKey;
+    const title = 'Hello world!!';
+    const message = 'This is a message';
 
-  it('Initialize Crudapp', async () => {
-    await program.methods
-      .initialize()
-      .accounts({
-        crudapp: crudappKeypair.publicKey,
-        payer: payer.publicKey,
-      })
-      .signers([crudappKeypair])
-      .rpc()
+    // Find out the pda
+    const [entryPda,_bump] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from(title),
+        owner.toBuffer(),
+      ],
+      program.programId
+    );
 
-    const currentCount = await program.account.crudapp.fetch(crudappKeypair.publicKey)
+    // Create the journal entry
+    await program.methods.createJournalEntry(title, message).rpc();
 
-    expect(currentCount.count).toEqual(0)
-  })
 
-  it('Increment Crudapp', async () => {
-    await program.methods.increment().accounts({ crudapp: crudappKeypair.publicKey }).rpc()
+    // Verify the journal entry
+    const account = await program.account.journalEntryState.fetch(entryPda);
+    console.log(account);
 
-    const currentCount = await program.account.crudapp.fetch(crudappKeypair.publicKey)
+    expect(account.title).toBe(title);
+    expect(account.message).toBe(message);
+    expect(account.owner.toString()).toEqual(owner.toString());
+  });
 
-    expect(currentCount.count).toEqual(1)
-  })
+  it('Update journal entry', async () => {
+    // Define args
+    const owner = provider.wallet.publicKey;
+    const title = 'Test Update';
+    const message = 'This is a message';
 
-  it('Increment Crudapp Again', async () => {
-    await program.methods.increment().accounts({ crudapp: crudappKeypair.publicKey }).rpc()
+    // Find out the pda
+    const [entryPda,_bump] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from(title),
+        owner.toBuffer(),
+      ],
+      program.programId
+    );
 
-    const currentCount = await program.account.crudapp.fetch(crudappKeypair.publicKey)
+    // Create the journal entry
+    await program.methods.createJournalEntry(title, message).rpc();
 
-    expect(currentCount.count).toEqual(2)
-  })
+    // Update the journal entry
+    const newMessage = 'This is a new message';
+    await program.methods.updateJournalEntry(title, newMessage).rpc();
 
-  it('Decrement Crudapp', async () => {
-    await program.methods.decrement().accounts({ crudapp: crudappKeypair.publicKey }).rpc()
+    // Verify the journal entry
+    const account = await program.account.journalEntryState.fetch(entryPda);
+    console.log(account);
 
-    const currentCount = await program.account.crudapp.fetch(crudappKeypair.publicKey)
+    expect(account.title).toBe(title);
+    expect(account.message).toBe(newMessage);
+    expect(account.owner.toString()).toEqual(owner.toString());
+  });
 
-    expect(currentCount.count).toEqual(1)
-  })
+  it('Delete journal entry', async () => {
+    // Define args
+    const owner = provider.wallet.publicKey;
+    const title = 'Test Delete';
+    const message = 'This is a message';
 
-  it('Set crudapp value', async () => {
-    await program.methods.set(42).accounts({ crudapp: crudappKeypair.publicKey }).rpc()
+    // Find out the pda
+    const [entryPda,_bump] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from(title),
+        owner.toBuffer(),
+      ],
+      program.programId
+    );
 
-    const currentCount = await program.account.crudapp.fetch(crudappKeypair.publicKey)
+    // Create the journal entry
+    await program.methods.createJournalEntry(title, message).rpc();
 
-    expect(currentCount.count).toEqual(42)
-  })
+    // Delete the journal entry
+    await program.methods.deleteJournalEntry(title).rpc();
 
-  it('Set close the crudapp account', async () => {
-    await program.methods
-      .close()
-      .accounts({
-        payer: payer.publicKey,
-        crudapp: crudappKeypair.publicKey,
-      })
-      .rpc()
-
-    // The account should no longer exist, returning null.
-    const userAccount = await program.account.crudapp.fetchNullable(crudappKeypair.publicKey)
-    expect(userAccount).toBeNull()
-  })
+    // Verify the journal entry
+    const accountInfo = await program.account.journalEntryState.fetch(entryPda).catch((err) => {
+      expect(err).toBeDefined();
+      const anchorError = err as anchor.AnchorError;
+      expect(anchorError.message).toContain('Could not find')
+    });
+    expect(accountInfo).toBeUndefined();
+  });
 })
